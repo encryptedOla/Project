@@ -21,10 +21,9 @@ fixes this by serving files over http://localhost instead.
 Getting the Project
 Open your terminal (Command Prompt, PowerShell, or Terminal on Mac/Linux) and run:
 # 1. Clone the repository
-git clone https://github.com/YOUR_USERNAME/examsynced.git
+git clone https://github.com/encryptedOla/examsynced.git
 # 2. Move into the project folder
 cd examsynced
-Replace YOUR_USERNAME with the actual GitHub username of the repo owner.
 Running the Interface
 Pick one of the methods below depending on what you have installed.
 Option 1 — Python (Recommended, easiest)
