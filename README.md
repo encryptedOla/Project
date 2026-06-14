@@ -1,134 +1,283 @@
-ExamSync — University Examination Scheduling
-System
-A web-based interface for building conflict-free examination timetables. Manage tutors,
-courses, halls, and generate schedules automatically.
-Table of Contents
-Prerequisites
-Getting the Project
-Running the Interface
-Navigating the App
-Connecting to a Backend
-Project Structure
-Troubleshooting
-Prerequisites
-You don’t need to install anything special to view the frontend. You just need:
-A computer with a modern browser (Chrome, Firefox, Edge, or Safari)
-Git — to clone the repo
-A simple local server — one of the options below
-Why do I need a local server? Browsers block certain features (like loading CSS and JS
-files) when you open HTML directly from your file system using file:// . A local server
-fixes this by serving files over http://localhost instead.
-Getting the Project
-Open your terminal (Command Prompt, PowerShell, or Terminal on Mac/Linux) and run:
-# 1. Clone the repository
-git clone https://github.com/encryptedOla/examsynced.git
-# 2. Move into the project folder
-cd examsynced
-Running the Interface
-Pick one of the methods below depending on what you have installed.
-Option 1 — Python (Recommended, easiest)
-Python comes pre-installed on most computers. Check if you have it:
-python --version
-# or
-python3 --version
-If you see a version number, run this inside the examsynced/ folder:
-# Python 3
-python3 -m http.server 3000
-# Python 2 (older machines)
-python -m SimpleHTTPServer 3000
-Then open your browser and go to:
-http://localhost:3000/login.html
-Option 2 — Node.js / npx
-If you have Node.js installed:
-npx serve .
-Then open your browser and go to:
-http://localhost:3000/login.html
-Option 3 — VS Code Live Server (easiest if you use VS Code)
-1. Open VS Code
-2. Install the Live Server extension (search for it in the Extensions tab)
-3. Open the examsynced/ folder in VS Code
-4. Right-click on login.html in the file explorer
-5. Click “Open with Live Server”
-Your browser will open automatically at http://127.0.0.1:5500/login.html .
-Option 4 — PHP (if you have it installed)
-php -S localhost:3000
-Then open:
-http://localhost:3000/login.html
-Navigating the App
-Once the server is running, this is the intended flow:
-login.html
+# ExamSync — University Examination Scheduling System
+
+> A Flask-powered web application for building conflict-free examination timetables.
+> Manage tutors, courses, halls, and generate schedules automatically.
+
+---
+
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Project Structure](#project-structure)
+- [Setting Up the Database](#setting-up-the-database)
+- [Running the App](#running-the-app)
+- [Navigating the App](#navigating-the-app)
+- [API Endpoints](#api-endpoints)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## Prerequisites
+
+You need the following installed before you start:
+
+- [Python 3.8+](https://www.python.org/downloads/)
+- [MySQL](https://dev.mysql.com/downloads/mysql/) — the database server
+- [Git](https://git-scm.com/downloads) — to clone the repo
+- A terminal (Command Prompt, PowerShell, or Terminal on Mac/Linux)
+
+---
+
+## Project Structure
+
+```
+timetable_project/
 │
-├── New user? → register.html → back to login.html
+├── static/                     # All styling, scripts, and images
+│   ├── css/
+│   │   └── styles.css          ← Move your styles.css here
+│   ├── js/                     ← Future JavaScript files
+│   └── img/                    ← Any logos or icons
 │
-└── Existing user? → pages/dashboard.html
+├── templates/                  # All HTML files (Flask renders these)
+│   ├── index.html              ← Landing page
+│   ├── login.html              ← Sign-in page
+│   ├── register.html           ← New account registration
+│   ├── dashboard.html          ← Main admin panel
+│   ├── courses.html            ← Where admin inputs course data
+│   ├── halls.html              ← Where admin inputs room data
+│   ├── tutors.html             ← Where admin inputs lecturers
+│   ├── generation.html         ← Loading screen when GA/SA is running
+│   ├── schedule.html           ← Schedule setup
+│   └── timetable.html          ← Where the final result is displayed
 │
-├── pages/tutors.html (Add / manage tutors)
-Start here: http://localhost:3000/login.html
-Use the sidebar on any dashboard page to move between sections. Every page is fully
-navigable from the sidebar.
-Note: Until you connect a real backend, forms will not save data permanently. The UI will
-still open and display correctly, but submitted data will not persist after a page refresh.
-Project Structure
-examsynced/
-│
-├── login.html ← Sign-in page (start here)
-├── register.html ← New account registration
-│
-├── auth.css ← Styles for login & register pages
-├── styles.css ← Styles for all dashboard pages
-├── app.js ← Shared JavaScript (you will create/edit this)
-│
-├── README.md ← This file
-├── INTEGRATION_GUIDE.md ← Full backend wiring reference
-│
-└── pages/
-├── dashboard.html ← Overview: stats, charts, activity
-├── tutors.html ← Tutor/invigilator management
-├── courses.html ← Course registration
-├── halls.html ← Exam hall/venue management
-├── schedule.html ← Exam window & session setup
-├── generation.html ← Timetable generation (algorithm settings)
-└── timetable.html ← View, filter & export the timetable
-Connecting to a Backend
-See INTEGRATION_GUIDE.md for the full breakdown of every input field and its matching
-API endpoint.
-├── pages/courses.html (Add / manage courses)
-├── pages/halls.html (Add / manage exam halls)
-├── pages/schedule.html (Set exam dates & time slots)
-├── pages/generation.html (Run the scheduling algorithm)
-└── pages/timetable.html (View & export the timetable)
-Quick setup
-1. Open app.js (create it in the root examsynced/ folder if it doesn’t exist yet)
-2. Set your backend URL at the top of the file:
-const API_BASE = 'http://localhost:8000'; // change this to your backend URL
-3. All fetch calls in the app should use this variable:
-const res = await fetch(`${API_BASE}/api/tutors`, {
-method: 'GET',
-headers: {
-'Authorization': `Bearer ${localStorage.getItem('token')}`
-}
-});
-4. After a successful login, store the token so all pages can use it:
-localStorage.setItem('token', data.token);
-5. To log out from any page:
-localStorage.removeItem('token');
-window.location.href = '../login.html';
-Troubleshooting
-The page is blank or CSS is not loading → You are opening the HTML file directly with
-file:// . Use one of the local server options above instead.
-Clicking a link goes to a 404 page → Make sure your server is running from inside the
-examsynced/ folder, not from a parent folder.
-Forms submit but nothing saves after refresh → The backend is not connected yet. Data
-is only held in memory until you wire up the API. See INTEGRATION_GUIDE.md .
-CORS error in the browser console → Your backend needs to allow requests from
-http://localhost:3000 . Add this header on your backend:
-Access-Control-Allow-Origin: http://localhost:3000
-Port 3000 is already in use → Change the port number in your server command, e.g.
-python3 -m http.server 4000 , then visit http://localhost:4000/login.html .
-Login redirects but pages look broken → Check that styles.css and app.js paths are
-correct. Dashboard pages reference them as ../styles.css and ../app.js .
-Two Key Files to Read
-File What it covers
-README.md How to run the interface locally (this file)
-INTEGRATION_GUIDE.md Every input field, API endpoint, and backend wiring instruction
-ExamSync — University Scheduling System
+├── app.py                      ← Main Python server file
+├── optimizer.py                ← Where GA and SA Python code will live
+├── database_setup.sql          ← MySQL table creation scripts
+├── requirements.txt            ← Python dependencies
+├── .env                        ← Your private credentials (never commit this)
+├── .env.example                ← Template for .env
+└── README.md                   ← This file
+```
+
+---
+
+## Setting Up the Database
+
+### Step 1 — Start MySQL and create the database
+
+Open your terminal and log into MySQL:
+
+```bash
+mysql -u root -p
+```
+
+Then run the setup script which creates all tables automatically:
+
+```bash
+mysql -u root -p < database_setup.sql
+```
+
+This creates the `examsynced` database with these 6 tables:
+
+| Table | What it stores |
+|---|---|
+| `users` | Login accounts (from register/login page) |
+| `tutors` | Lecturers and invigilators |
+| `courses` | Exam courses with student counts |
+| `halls` | Exam venues with capacity |
+| `schedule_sessions` | Available exam dates and time slots |
+| `timetable_entries` | The final generated timetable |
+
+---
+
+### Step 2 — Create your `.env` file
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` and fill in your MySQL password:
+
+```env
+DB_USER=root
+DB_PASSWORD=your_mysql_password_here
+DB_HOST=localhost
+DB_NAME=examsynced
+JWT_SECRET_KEY=pick-a-long-random-string
+```
+
+---
+
+## Running the App
+
+### Step 1 — Install Python dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### Step 2 — Run Flask
+
+```bash
+python app.py
+```
+
+You will see:
+
+```
+✅ Connected to MySQL — all tables are ready.
+ * Running on http://127.0.0.1:5000
+```
+
+### Step 3 — Open in browser
+
+```
+http://localhost:5000
+```
+
+You will land on the login page. Register a new account and you're in.
+
+---
+
+## Navigating the App
+
+All pages are served by Flask from the `/templates` folder.
+Use the URL routes below to navigate — do **not** open HTML files directly:
+
+| URL | Page |
+|---|---|
+| `http://localhost:5000/` | Login page |
+| `http://localhost:5000/login` | Login page |
+| `http://localhost:5000/register` | Register page |
+| `http://localhost:5000/dashboard` | Dashboard |
+| `http://localhost:5000/tutors` | Tutor management |
+| `http://localhost:5000/courses` | Course management |
+| `http://localhost:5000/halls` | Exam halls |
+| `http://localhost:5000/schedule` | Schedule setup |
+| `http://localhost:5000/generation` | Timetable generation |
+| `http://localhost:5000/timetable` | View timetable |
+
+**App flow:**
+
+```
+/ (login)
+  │
+  ├── New user?  →  /register  →  /dashboard
+  │
+  └── Existing?  →  /dashboard
+                      │
+                      ├── /tutors
+                      ├── /courses
+                      ├── /halls
+                      ├── /schedule
+                      ├── /generation
+                      └── /timetable
+```
+
+---
+
+## API Endpoints
+
+Every API call requires a JWT token in the header (except login and register):
+
+```
+Authorization: Bearer <your_token>
+```
+
+The token is returned when you log in or register, and stored in `localStorage`.
+
+### Auth
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/auth/register` | Create a new account |
+| `POST` | `/api/auth/login` | Login, returns JWT token |
+| `GET` | `/api/auth/me` | Get current logged-in user |
+| `POST` | `/api/auth/logout` | Logout |
+
+### Tutors
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/tutors` | List all tutors |
+| `POST` | `/api/tutors` | Add a tutor |
+| `PUT` | `/api/tutors/<id>` | Edit a tutor |
+| `DELETE` | `/api/tutors/<id>` | Delete a tutor |
+
+### Courses
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/courses` | List all courses |
+| `POST` | `/api/courses` | Add a course |
+| `PUT` | `/api/courses/<id>` | Edit a course |
+| `DELETE` | `/api/courses/<id>` | Delete a course |
+
+### Halls
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/halls` | List all halls |
+| `POST` | `/api/halls` | Add a hall |
+| `PUT` | `/api/halls/<id>` | Edit a hall |
+| `DELETE` | `/api/halls/<id>` | Delete a hall |
+
+### Schedule
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/schedule/sessions` | List all sessions |
+| `POST` | `/api/schedule/sessions` | Add a session |
+| `DELETE` | `/api/schedule/sessions/<id>` | Remove a session |
+
+### Timetable
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/timetable/generate` | Run the scheduling algorithm |
+| `GET` | `/api/timetable/latest` | Get the generated timetable |
+| `GET` | `/api/dashboard/stats` | Get dashboard stats |
+
+---
+
+## Troubleshooting
+
+**`ModuleNotFoundError`**
+→ Run `pip install -r requirements.txt` again.
+
+**`Access denied for user 'root'@'localhost'`**
+→ Your MySQL password in `.env` is wrong. Double-check `DB_PASSWORD`.
+
+**`Unknown database 'examsynced'`**
+→ You haven't run the setup script yet. Run:
+```bash
+mysql -u root -p < database_setup.sql
+```
+
+**`Can't connect to MySQL server`**
+→ MySQL is not running. Start it with:
+```bash
+# Mac
+brew services start mysql
+
+# Windows — open Services and start MySQL
+# Linux
+sudo systemctl start mysql
+```
+
+**`CORS error in the browser console`**
+→ Flask-CORS is already configured in `app.py`. If you still see this, make sure you're accessing the app via `http://localhost:5000` and not opening HTML files directly.
+
+**Page shows but CSS is missing**
+→ Make sure `styles.css` is inside `static/css/styles.css`. Then in your HTML templates reference it as:
+```html
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+```
+
+**`JWT token missing or expired`**
+→ Log in again at `http://localhost:5000/login`. The token lasts 7 days (30 days if "Remember me" is checked).
+
+---
+
+*ExamSync — University Examination Scheduling System*

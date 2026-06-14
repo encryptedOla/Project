@@ -1,0 +1,14 @@
+# Copy this to .env and fill in your MySQL credentials
+# Never commit .env to GitHub
+
+FLASK_APP=app.py
+FLASK_ENV=development
+
+# MySQL connection
+DB_USER=root
+DB_PASSWORD=your_mysql_password
+DB_HOST=localhost
+DB_NAME=examsynced
+
+# JWT — change to a long random string
+JWT_SECRET_KEY=your-super-secret-key-change-this
