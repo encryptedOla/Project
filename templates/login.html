@@ -532,6 +532,10 @@
         <div class="auth-card-title">Welcome back</div>
         <div class="auth-card-sub">Sign in to your ExamSync account</div>
 
+        <div id="apiError"
+          style="display:none;background:#FEF2F2;border:1px solid #DC2626;color:#DC2626;border-radius:6px;padding:10px 14px;font-size:13px;margin-bottom:16px;">
+        </div>
+
         <div class="form-group">
           <label class="form-label">Email address</label>
           <div class="input-wrap">
@@ -577,7 +581,7 @@
           <a href="#" class="link">Forgot password?</a>
         </div>
 
-        <button class="btn-auth" onclick="handleLogin()">
+        <button class="btn-auth" id="loginBtn" onclick="handleLogin()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
             <polyline points="10 17 15 12 10 7" />
@@ -628,17 +632,20 @@
       btn.style.color = isText ? '' : 'var(--blue-primary)';
     }
 
-    function handleLogin() {
+    async function handleLogin() {
       const email = document.getElementById('loginEmail');
       const pw = document.getElementById('loginPassword');
       const emailErr = document.getElementById('emailErr');
       const pwErr = document.getElementById('pwErr');
+      const apiError = document.getElementById('apiError');
+      const btn = document.getElementById('loginBtn');
       let valid = true;
 
       emailErr.classList.remove('show');
       pwErr.classList.remove('show');
       email.classList.remove('error');
       pw.classList.remove('error');
+      apiError.style.display = 'none';
 
       if (!email.value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
         email.classList.add('error');
@@ -652,8 +659,40 @@
       }
       if (!valid) return;
 
-      showToast('Signing in…', '');
-      setTimeout(() => { window.location.href = 'pages/dashboard.html'; }, 1200);
+      btn.disabled = true;
+      btn.textContent = 'Signing in…';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email.value.trim(),
+            password: pw.value,
+            remember_me: document.getElementById('rememberMe').checked,
+          }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          apiError.textContent = data.error || 'Login failed. Please try again.';
+          apiError.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Sign In';
+          return;
+        }
+
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        showToast('Welcome back, ' + data.user.first_name + '!', 'success');
+        setTimeout(() => { window.location.href = '/dashboard'; }, 1000);
+
+      } catch (err) {
+        apiError.textContent = 'Cannot reach the server. Make sure Flask is running.';
+        apiError.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      }
     }
 
     function showToast(msg, type) {
@@ -665,7 +704,6 @@
       setTimeout(() => t.remove(), 3000);
     }
 
-    // Allow Enter key to submit
     document.addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
   </script>
 </body>

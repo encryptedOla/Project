@@ -603,6 +603,10 @@
         <div class="auth-card-title">Create your account</div>
         <div class="auth-card-sub">Join ExamSync — it's free to get started</div>
 
+        <div id="apiError"
+          style="display:none;background:#FEF2F2;border:1px solid #DC2626;color:#DC2626;border-radius:6px;padding:10px 14px;font-size:13px;margin-bottom:16px;">
+        </div>
+
         <!-- Name row -->
         <div class="form-row">
           <div class="form-group">
@@ -768,7 +772,7 @@
         <div class="field-error" id="termsErr" style="margin-top:-10px;margin-bottom:14px">You must accept the terms to
           continue.</div>
 
-        <button class="btn-auth" onclick="handleRegister()">
+        <button class="btn-auth" id="registerBtn" onclick="handleRegister()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
             <circle cx="8.5" cy="7" r="4" />
@@ -822,31 +826,32 @@
       label.style.color = lvl.color || 'var(--gray-400)';
     }
 
-    function handleRegister() {
-      // clear errors
+    async function handleRegister() {
+      const apiError = document.getElementById('apiError');
+      const btn = document.getElementById('registerBtn');
+
       ['firstName', 'lastName', 'regEmail', 'institution', 'regPw', 'regPwConfirm', 'terms'].forEach(id => {
-        const errId = id + 'Err';
         const el = document.getElementById(id);
-        const errEl = document.getElementById(errId);
+        const errEl = document.getElementById(id + 'Err');
         if (el) el.classList.remove('error');
         if (errEl) errEl.classList.remove('show');
       });
+      apiError.style.display = 'none';
 
       let valid = true;
 
-      function require(id, errId, msg) {
+      function requireField(id, errId) {
         const el = document.getElementById(id);
         if (!el || !el.value.trim()) {
           el && el.classList.add('error');
-          const e = document.getElementById(errId);
-          e && (e.classList.add('show'), msg && (e.textContent = msg));
+          document.getElementById(errId)?.classList.add('show');
           valid = false;
         }
       }
 
-      require('firstName', 'firstNameErr');
-      require('lastName', 'lastNameErr');
-      require('institution', 'institutionErr');
+      requireField('firstName', 'firstNameErr');
+      requireField('lastName', 'lastNameErr');
+      requireField('institution', 'institutionErr');
 
       const email = document.getElementById('regEmail');
       if (!email.value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
@@ -863,25 +868,58 @@
         document.getElementById('regPwErr').classList.add('show');
         valid = false;
       }
-
       if (pw.value && pw.value !== pwConf.value) {
         pwConf.classList.add('error');
         document.getElementById('regPwConfirmErr').classList.add('show');
         valid = false;
       }
-
       if (!document.getElementById('terms').checked) {
         document.getElementById('termsErr').classList.add('show');
         valid = false;
       }
-
       if (!valid) return;
 
-      showToast('Creating your account…', '');
-      setTimeout(() => {
-        showToast('Account created! Redirecting…', 'success');
-        setTimeout(() => { window.location.href = 'pages/dashboard.html'; }, 1200);
-      }, 1200);
+      const role = document.querySelector('input[name="role"]:checked')?.value || 'viewer';
+
+      btn.disabled = true;
+      btn.textContent = 'Creating account…';
+
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            first_name: document.getElementById('firstName').value.trim(),
+            last_name: document.getElementById('lastName').value.trim(),
+            email: email.value.trim(),
+            institution: document.getElementById('institution').value.trim(),
+            department: document.getElementById('department').value.trim(),
+            role: role,
+            password: pw.value,
+            terms_accepted: true,
+          }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          apiError.textContent = data.error || 'Registration failed. Please try again.';
+          apiError.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Create Account';
+          return;
+        }
+
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        showToast('Account created! Welcome, ' + data.user.first_name + '!', 'success');
+        setTimeout(() => { window.location.href = '/dashboard'; }, 1200);
+
+      } catch (err) {
+        apiError.textContent = 'Cannot reach the server. Make sure Flask is running.';
+        apiError.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Create Account';
+      }
     }
 
     function showToast(msg, type) {
