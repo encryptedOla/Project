@@ -11,7 +11,7 @@
 <body>
 
   <!-- ===== Loading Spinner ===== -->
-  <div class="spinner-overlay" id="spinner">
+  <div class="spinner-overlay" id="spinner" style="display:none">
     <div class="spinner"></div>
     <div class="spinner-text">Loading…</div>
   </div>
@@ -44,9 +44,10 @@
         <label class="form-label">Facilities (comma separated)</label>
         <input class="form-control" id="hallFeatures" placeholder="AC, Projector, CCTV" />
       </div>
+      <div id="hallModalError" style="display:none;color:#DC2626;font-size:12px;margin-top:8px;"></div>
       <div class="modal-footer">
         <button class="btn btn-outline btn-sm" onclick="closeModal('modalHall')">Cancel</button>
-        <button class="btn btn-primary btn-sm" onclick="saveHall()">Save Hall</button>
+        <button class="btn btn-primary btn-sm" id="saveHallBtn" onclick="saveHall()">Save Hall</button>
       </div>
     </div>
   </div>
@@ -146,12 +147,16 @@
       </nav>
       <div class="sidebar-footer">
         <div class="sidebar-user">
-          <div class="sidebar-user-avatar">AA</div>
+          <div class="sidebar-user-avatar" id="sidebarAvatar">AA</div>
           <div>
-            <div class="sidebar-user-name">Admin Account</div>
-            <div class="sidebar-user-role">Registry Officer</div>
+            <div class="sidebar-user-name" id="sidebarName">Loading…</div>
+            <div class="sidebar-user-role" id="sidebarRole">—</div>
           </div>
         </div>
+        <button onclick="handleLogout()" style="width:100%;margin-top:12px;padding:9px;background:transparent;border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#9CA3AF;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background 0.15s,color 0.15s;" onmouseover="this.style.background='rgba(220,38,38,0.15)';this.style.color='#F87171';" onmouseout="this.style.background='transparent';this.style.color='#9CA3AF';">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Logout
+        </button>
       </div>
     </aside>
 
@@ -172,7 +177,7 @@
           </div>
           <div class="page-actions">
             <button class="btn btn-primary"
-              onclick="openModal('modalHall'); document.getElementById('modalHallTitle').textContent='Add Hall'; clearHallForm()">
+              onclick="openAddHallModal()">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
@@ -186,7 +191,156 @@
     </main>
   </div>
 
-  <script src="../app.js"></script>
+  <script>
+    // ── Auth guard ──────────────────────────────────────────
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/login';
+
+    // ── Load user info into sidebar ─────────────────────────
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (user.first_name) {
+      const initials = (user.first_name[0] || '') + (user.last_name?.[0] || '');
+      const avatarEls = document.querySelectorAll('#sidebarAvatar, #userAvatar');
+      avatarEls.forEach(el => el.textContent = initials);
+      const nameEl = document.getElementById('sidebarName');
+      const roleEl = document.getElementById('sidebarRole');
+      if (nameEl) nameEl.textContent = user.first_name + ' ' + (user.last_name || '');
+      if (roleEl) roleEl.textContent = user.role || 'User';
+    }
+
+    // ── Logout ──────────────────────────────────────────────
+    async function handleLogout() {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+      } catch (_) {}
+      localStorage.clear();
+      window.location.href = '/login';
+    }
+
+    // ── Toast ───────────────────────────────────────────────
+    function showToast(msg, type) {
+      const c = document.getElementById('toastContainer');
+      const t = document.createElement('div');
+      t.className = 'toast' + (type === 'success' ? ' success' : type === 'error' ? ' error' : '');
+      t.textContent = msg;
+      c.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    }
+
+    // ── Modal helpers ───────────────────────────────────────
+    function openModal(id) { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+    let allHalls = [];
+    let editingHallId = null;
+
+    function openAddHallModal() {
+      editingHallId = null;
+      document.getElementById('modalHallTitle').textContent = 'Add Examination Hall';
+      document.getElementById('saveHallBtn').textContent = 'Save Hall';
+      clearHallForm();
+      openModal('modalHall');
+    }
+
+    function openEditHallModal(h) {
+      editingHallId = h.id;
+      document.getElementById('modalHallTitle').textContent = 'Edit Hall';
+      document.getElementById('saveHallBtn').textContent = 'Update Hall';
+      document.getElementById('hallName').value     = h.name || '';
+      document.getElementById('hallLocation').value = h.location || '';
+      document.getElementById('hallCapacity').value = h.capacity || '';
+      document.getElementById('hallFeatures').value = Array.isArray(h.facilities) ? h.facilities.join(', ') : (h.facilities || '');
+      openModal('modalHall');
+    }
+
+    function clearHallForm() {
+      ['hallName','hallLocation','hallCapacity','hallFeatures'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('hallModalError').style.display = 'none';
+    }
+
+    async function loadHalls() {
+      try {
+        const res = await fetch('/api/halls', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.status === 401) { localStorage.clear(); window.location.href = '/login'; return; }
+        const data = await res.json();
+        allHalls = data.halls || [];
+        renderHalls(allHalls);
+      } catch(e) {
+        document.getElementById('hallsGrid').innerHTML = '<p style="color:#DC2626;padding:32px;">Could not load halls. Make sure Flask is running.</p>';
+      }
+    }
+
+    function renderHalls(halls) {
+      const grid = document.getElementById('hallsGrid');
+      if (!halls.length) {
+        grid.innerHTML = '<p style="color:var(--gray-400);padding:32px;">No halls yet. Click "Add Hall" to get started.</p>';
+        return;
+      }
+      grid.innerHTML = halls.map(h => `
+        <div class="hall-card">
+          <div class="hall-card-header">
+            <div class="hall-name">${h.name}</div>
+            <span class="hall-status ${h.status === 'available' ? 'available' : 'unavailable'}">${h.status}</span>
+          </div>
+          <div class="hall-location">${h.location || '—'}</div>
+          <div class="hall-capacity">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            ${h.capacity} seats
+          </div>
+          <div class="hall-features">
+            ${(Array.isArray(h.facilities) ? h.facilities : []).map(f => '<span class="feature-tag">' + f.trim() + '</span>').join('')}
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <button class="btn btn-outline btn-sm" onclick='openEditHallModal(${JSON.stringify(h)})'>Edit</button>
+            <button class="btn btn-sm" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;" onclick="deleteHall(${h.id},'${h.name}')">Delete</button>
+          </div>
+        </div>`).join('');
+    }
+
+    async function saveHall() {
+      const errDiv = document.getElementById('hallModalError');
+      const btn    = document.getElementById('saveHallBtn');
+      const name   = document.getElementById('hallName').value.trim();
+      const cap    = document.getElementById('hallCapacity').value.trim();
+      errDiv.style.display = 'none';
+      if (!name || !cap) { errDiv.textContent = 'Hall name and capacity are required.'; errDiv.style.display = 'block'; return; }
+
+      btn.disabled = true; btn.textContent = 'Saving…';
+      const isEdit = editingHallId !== null;
+      const payload = {
+        name,
+        location:   document.getElementById('hallLocation').value.trim(),
+        capacity:   parseInt(cap),
+        facilities: document.getElementById('hallFeatures').value.trim(),
+      };
+
+      try {
+        const res = await fetch(isEdit ? '/api/halls/' + editingHallId : '/api/halls', {
+          method:  isEdit ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body:    JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) { errDiv.textContent = data.error || 'Failed to save.'; errDiv.style.display = 'block'; btn.disabled = false; btn.textContent = isEdit ? 'Update Hall' : 'Save Hall'; return; }
+        closeModal('modalHall');
+        showToast(isEdit ? 'Hall updated!' : 'Hall added!', 'success');
+        loadHalls();
+      } catch(e) { errDiv.textContent = 'Server error.'; errDiv.style.display = 'block'; btn.disabled = false; btn.textContent = isEdit ? 'Update Hall' : 'Save Hall'; }
+    }
+
+    async function deleteHall(id, name) {
+      if (!confirm('Delete hall "' + name + '"?')) return;
+      const res = await fetch('/api/halls/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+      if (res.ok) { showToast('Hall deleted.', 'success'); loadHalls(); }
+      else showToast('Could not delete hall.', 'error');
+    }
+
+    document.getElementById('modalHall').addEventListener('click', function(e) { if (e.target === this) closeModal('modalHall'); });
+    loadHalls();
+  </script>
 </body>
 
 </html>

@@ -114,12 +114,16 @@
       </nav>
       <div class="sidebar-footer">
         <div class="sidebar-user">
-          <div class="sidebar-user-avatar">AA</div>
+          <div class="sidebar-user-avatar" id="sidebarAvatar">AA</div>
           <div>
-            <div class="sidebar-user-name">Admin Account</div>
-            <div class="sidebar-user-role">Registry Officer</div>
+            <div class="sidebar-user-name" id="sidebarName">Loading…</div>
+            <div class="sidebar-user-role" id="sidebarRole">—</div>
           </div>
         </div>
+        <button onclick="handleLogout()" style="width:100%;margin-top:12px;padding:9px;background:transparent;border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#9CA3AF;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background 0.15s,color 0.15s;" onmouseover="this.style.background='rgba(220,38,38,0.15)';this.style.color='#F87171';" onmouseout="this.style.background='transparent';this.style.color='#9CA3AF';">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Logout
+        </button>
       </div>
     </aside>
 
@@ -275,7 +279,101 @@
     </main>
   </div>
 
-  <script src="../app.js"></script>
+  <script>
+    // ── Auth guard ──────────────────────────────────────────
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/login';
+
+    // ── Load user info into sidebar ─────────────────────────
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (user.first_name) {
+      const initials = (user.first_name[0] || '') + (user.last_name?.[0] || '');
+      const avatarEls = document.querySelectorAll('#sidebarAvatar, #userAvatar');
+      avatarEls.forEach(el => el.textContent = initials);
+      const nameEl = document.getElementById('sidebarName');
+      const roleEl = document.getElementById('sidebarRole');
+      if (nameEl) nameEl.textContent = user.first_name + ' ' + (user.last_name || '');
+      if (roleEl) roleEl.textContent = user.role || 'User';
+    }
+
+    // ── Logout ──────────────────────────────────────────────
+    async function handleLogout() {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+      } catch (_) {}
+      localStorage.clear();
+      window.location.href = '/login';
+    }
+
+    // ── Toast ───────────────────────────────────────────────
+    function showToast(msg, type) {
+      const c = document.getElementById('toastContainer');
+      const t = document.createElement('div');
+      t.className = 'toast' + (type === 'success' ? ' success' : type === 'error' ? ' error' : '');
+      t.textContent = msg;
+      c.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    }
+
+    // ── Modal helpers ───────────────────────────────────────
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    let sessions = [];
+
+    async function loadSessions() {
+      try {
+        const res  = await fetch('/api/schedule/sessions', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.status === 401) { localStorage.clear(); window.location.href = '/login'; return; }
+        const data = await res.json();
+        sessions = data.sessions || [];
+        updateSummary();
+      } catch(e) { console.error('Could not load sessions', e); }
+    }
+
+    function updateSummary() {
+      const days = [...new Set(sessions.map(s => s.date))].length;
+      document.getElementById('sched-days').textContent     = days;
+      document.getElementById('sched-sessions').textContent = sessions.length;
+      document.getElementById('sched-slots').textContent    = sessions.length * 2;
+      document.getElementById('sched-buffers').textContent  = 0;
+    }
+
+    async function addSession() {
+      const date  = document.getElementById('schedDate').value;
+      const type  = document.getElementById('schedType').value;
+      const start = document.getElementById('schedStart').value;
+      const end   = document.getElementById('schedEnd').value;
+
+      if (!date || !start || !end) { showToast('Please fill in date, start time and end time.', 'error'); return; }
+
+      const typeMap = { 'Morning Session': 'morning', 'Afternoon Session': 'afternoon', 'Evening Session': 'evening' };
+
+      try {
+        const res = await fetch('/api/schedule/sessions', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body:    JSON.stringify({ date, session_type: typeMap[type] || 'morning', start_time: start, end_time: end })
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.error || 'Failed to add session.', 'error'); return; }
+        showToast('Session added!', 'success');
+        clearScheduleForm();
+        loadSessions();
+      } catch(e) { showToast('Server error.', 'error'); }
+    }
+
+    function clearScheduleForm() {
+      document.getElementById('schedDate').value  = '';
+      document.getElementById('schedStart').value = '';
+      document.getElementById('schedEnd').value   = '';
+    }
+
+    loadSessions();
+  </script>
 </body>
 
 </html>

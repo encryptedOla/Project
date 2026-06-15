@@ -1,225 +1,473 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ExamSync — Tutors</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
 </head>
-
 <body>
 
-  <!-- ===== Loading Spinner ===== -->
-  <div class="spinner-overlay" id="spinner">
-    <div class="spinner"></div>
-    <div class="spinner-text">Loading…</div>
-  </div>
+<!-- ===== Loading Spinner ===== -->
+<div class="spinner-overlay" id="spinner" style="display:none">
+  <div class="spinner"></div>
+  <div class="spinner-text">Loading…</div>
+</div>
 
-  <!-- ===== Toast Container ===== -->
-  <div class="toast-container" id="toastContainer"></div>
+<!-- ===== Toast Container ===== -->
+<div class="toast-container" id="toastContainer"></div>
 
-  <!-- ===== ADD TUTOR MODAL ===== -->
-  <div class="modal-overlay" id="modalTutor">
-    <div class="modal">
-      <div class="modal-header">
-        <span class="modal-title" id="modalTutorTitle">Add Tutor</span>
-        <button class="modal-close" onclick="closeModal('modalTutor')">×</button>
+<!-- ===== ADD / EDIT TUTOR MODAL ===== -->
+<div class="modal-overlay" id="modalTutor">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTutorTitle">Add Tutor</span>
+      <button class="modal-close" onclick="closeModal('modalTutor')">×</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Full Name</label>
+      <input class="form-control" id="tutorName" placeholder="e.g. Dr. John Mensah" />
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Staff ID</label>
+        <input class="form-control" id="tutorStaffId" placeholder="STF-006" />
       </div>
       <div class="form-group">
-        <label class="form-label">Full Name</label>
-        <input class="form-control" id="tutorName" placeholder="e.g. Dr. John Mensah" />
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Staff ID</label>
-          <input class="form-control" id="tutorStaffId" placeholder="STF-006" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Department</label>
-          <input class="form-control" id="tutorDept" placeholder="Computer Science" />
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Email</label>
-          <input class="form-control" id="tutorEmail" type="email" placeholder="j.mensah@uni.edu" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Phone</label>
-          <input class="form-control" id="tutorPhone" placeholder="+233 24 000 0000" />
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline btn-sm" onclick="closeModal('modalTutor')">Cancel</button>
-        <button class="btn btn-primary btn-sm" onclick="saveTutor()">Save Tutor</button>
+        <label class="form-label">Department</label>
+        <input class="form-control" id="tutorDept" placeholder="Computer Science" />
       </div>
     </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-control" id="tutorEmail" type="email" placeholder="j.mensah@uni.edu" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone</label>
+        <input class="form-control" id="tutorPhone" placeholder="+233 24 000 0000" />
+      </div>
+    </div>
+    <div id="modalError" style="display:none;color:#DC2626;font-size:12px;margin-top:8px;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modalTutor')">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="saveTutorBtn" onclick="saveTutor()">Save Tutor</button>
+    </div>
   </div>
+</div>
 
-  <!-- ===== APP SHELL ===== -->
-  <div class="app">
+<!-- ===== APP SHELL ===== -->
+<div class="app">
 
-    <!-- TOPBAR -->
-    <header class="topbar">
-      <div class="topbar-brand">
-        <div class="brand-logo">E</div>
-        <div class="brand-info">
-          <div class="brand-name">ExamSync</div>
-          <div class="brand-sub">University Scheduling</div>
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="brand-logo">E</div>
+      <div class="brand-info">
+        <div class="brand-name">ExamSync</div>
+        <div class="brand-sub">University Scheduling</div>
+      </div>
+    </div>
+    <div class="topbar-center">
+      <div class="topbar-search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" placeholder="Quick search…" oninput="filterTutors(this.value)" />
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-avatar" id="userAvatar">AA</div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Main Menu</div>
+      <a class="sidebar-item" href="/dashboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a class="sidebar-item active" href="/tutors">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Tutors
+      </a>
+      <a class="sidebar-item" href="/courses">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Courses
+      </a>
+      <a class="sidebar-item" href="/halls">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Exam Halls
+      </a>
+      <a class="sidebar-item" href="/schedule">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Schedule Setup
+      </a>
+      <a class="sidebar-item" href="/generation">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        Generation
+      </a>
+      <a class="sidebar-item" href="/timetable">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+        Timetable
+      </a>
+    </nav>
+
+    <!-- SIDEBAR FOOTER: user info + logout -->
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-user-avatar" id="sidebarAvatar">AA</div>
+        <div>
+          <div class="sidebar-user-name" id="sidebarName">Loading…</div>
+          <div class="sidebar-user-role" id="sidebarRole">—</div>
         </div>
       </div>
-      <div class="topbar-center">
-        <div class="topbar-search">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.35-4.35" />
-          </svg>
-          <input type="text" placeholder="Quick search…" />
-        </div>
-      </div>
-      <div class="topbar-right">
-        <button class="topbar-icon-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-          </svg>
-          <span class="notif-badge">3</span>
-        </button>
-        <div class="topbar-avatar">AA</div>
-      </div>
-    </header>
-
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-      <nav class="sidebar-nav">
-        <div class="sidebar-section-label">Main Menu</div>
-        <a class="sidebar-item" href="/dashboard">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="7" height="7" />
-            <rect x="14" y="3" width="7" height="7" />
-            <rect x="14" y="14" width="7" height="7" />
-            <rect x="3" y="14" width="7" height="7" />
-          </svg>
-          Dashboard
-        </a>
-        <a class="sidebar-item active" href="/tutors">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-          </svg>
-          Tutors
-        </a>
-        <a class="sidebar-item" href="/courses">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="3" width="20" height="14" rx="2" />
-            <line x1="8" y1="21" x2="16" y2="21" />
-            <line x1="12" y1="17" x2="12" y2="21" />
-          </svg>
-          Courses
-        </a>
-        <a class="sidebar-item" href="/halls">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-            <polyline points="9 22 9 12 15 12 15 22" />
-          </svg>
-          Exam Halls
-        </a>
-        <a class="sidebar-item" href="/schedule">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-            <line x1="16" y1="2" x2="16" y2="6" />
-            <line x1="8" y1="2" x2="8" y2="6" />
-            <line x1="3" y1="10" x2="21" y2="10" />
-          </svg>
-          Schedule Setup
-        </a>
-        <a class="sidebar-item" href="/generation">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" />
-          </svg>
-          Generation
-        </a>
-        <a class="sidebar-item" href="/timetable">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-          </svg>
-          Timetable
-        </a>
-      </nav>
-      <div class="sidebar-footer">
-        <div class="sidebar-user">
-          <div class="sidebar-user-avatar">AA</div>
-          <div>
-            <div class="sidebar-user-name">Admin Account</div>
-            <div class="sidebar-user-role">Registry Officer</div>
-          </div>
-        </div>
-      </div>
-    </aside>
-
-    <!-- MAIN CONTENT -->
-    <main class="main">
-      <div class="breadcrumb">
-        <span style="color:var(--gray-400)">University</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="9 18 15 12 9 6" />
+      <!-- LOGOUT BUTTON -->
+      <button onclick="handleLogout()" style="
+        width:100%;
+        margin-top:12px;
+        padding:9px;
+        background:transparent;
+        border:1px solid rgba(255,255,255,0.15);
+        border-radius:6px;
+        color:#9CA3AF;
+        font-size:13px;
+        font-weight:500;
+        cursor:pointer;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:8px;
+        transition:background 0.15s, color 0.15s;
+      " onmouseover="this.style.background='rgba(220,38,38,0.15)';this.style.color='#F87171';"
+         onmouseout="this.style.background='transparent';this.style.color='#9CA3AF';">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
         </svg>
-        <span>Tutors</span>
-      </div>
-      <div style="padding:28px 32px">
-        <div class="page-header">
-          <div>
-            <div class="page-title">Tutor Management</div>
-            <div class="page-subtitle">Manage examination supervisors and invigilators</div>
-          </div>
-          <div class="page-actions">
-            <button class="btn btn-primary"
-              onclick="openModal('modalTutor'); document.getElementById('modalTutorTitle').textContent='Add Tutor'; clearTutorForm()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              Add Tutor
-            </button>
-          </div>
-        </div>
-        <div class="table-container">
-          <div class="table-toolbar">
-            <div class="table-search">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.35-4.35" />
-              </svg>
-              <input type="text" placeholder="Search tutors by name or department…"
-                oninput="filterTutors(this.value)" />
-            </div>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Staff ID</th>
-                <th>Department</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="tutorsTableBody"></tbody>
-          </table>
-          <div class="table-footer">
-            <span class="table-count" id="tutors-count"></span>
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
+        Logout
+      </button>
+    </div>
+  </aside>
 
-  <script src="../app.js"></script>
+  <!-- MAIN CONTENT -->
+  <main class="main">
+    <div class="breadcrumb">
+      <span style="color:var(--gray-400)">University</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      <span>Tutors</span>
+    </div>
+    <div style="padding:28px 32px">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Tutor Management</div>
+          <div class="page-subtitle">Manage examination supervisors and invigilators</div>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-primary" onclick="openAddModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Tutor
+          </button>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <div class="table-toolbar">
+          <div class="table-search">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" placeholder="Search tutors by name or department…" oninput="filterTutors(this.value)" />
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Staff ID</th>
+              <th>Department</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tutorsTableBody">
+            <tr>
+              <td colspan="6" style="text-align:center;padding:32px;color:var(--gray-400);">
+                Loading tutors…
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="table-footer">
+          <span class="table-count" id="tutors-count"></span>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────
+  const token    = localStorage.getItem('token');
+  let allTutors  = [];       // full list from API
+  let editingId  = null;     // null = adding, number = editing
+
+  // ── Auth guard — redirect to login if no token ─────────
+  if (!token) window.location.href = '/login';
+
+  // ── Load user info into sidebar ────────────────────────
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  if (user.name) {
+    const initials = (user.first_name?.[0] || '') + (user.last_name?.[0] || '');
+    document.getElementById('sidebarAvatar').textContent = initials || 'U';
+    document.getElementById('userAvatar').textContent    = initials || 'U';
+    document.getElementById('sidebarName').textContent   = user.name;
+    document.getElementById('sidebarRole').textContent   = user.role || 'User';
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  MODAL HELPERS
+  // ══════════════════════════════════════════════════════
+
+  function openModal(id) {
+    document.getElementById(id).classList.add('open');
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+    document.getElementById('modalError').style.display = 'none';
+    editingId = null;
+  }
+
+  function openAddModal() {
+    editingId = null;
+    document.getElementById('modalTutorTitle').textContent = 'Add Tutor';
+    document.getElementById('saveTutorBtn').textContent    = 'Save Tutor';
+    clearTutorForm();
+    openModal('modalTutor');
+  }
+
+  function openEditModal(tutor) {
+    editingId = tutor.id;
+    document.getElementById('modalTutorTitle').textContent = 'Edit Tutor';
+    document.getElementById('saveTutorBtn').textContent    = 'Update Tutor';
+    document.getElementById('tutorName').value    = tutor.name    || '';
+    document.getElementById('tutorStaffId').value = tutor.staff_id || '';
+    document.getElementById('tutorDept').value    = tutor.department || '';
+    document.getElementById('tutorEmail').value   = tutor.email   || '';
+    document.getElementById('tutorPhone').value   = tutor.phone   || '';
+    openModal('modalTutor');
+  }
+
+  function clearTutorForm() {
+    ['tutorName', 'tutorStaffId', 'tutorDept', 'tutorEmail', 'tutorPhone']
+      .forEach(id => document.getElementById(id).value = '');
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  LOAD TUTORS FROM DATABASE
+  // ══════════════════════════════════════════════════════
+
+  async function loadTutors() {
+    try {
+      const res  = await fetch('/api/tutors', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (res.status === 401) {
+        // Token expired — go back to login
+        localStorage.clear();
+        window.location.href = '/login';
+        return;
+      }
+
+      const data = await res.json();
+      allTutors  = data.tutors || [];
+      renderTable(allTutors);
+
+    } catch (err) {
+      document.getElementById('tutorsTableBody').innerHTML = `
+        <tr><td colspan="6" style="text-align:center;padding:32px;color:#DC2626;">
+          Could not load tutors. Make sure Flask is running.
+        </td></tr>`;
+    }
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  RENDER TABLE
+  // ══════════════════════════════════════════════════════
+
+  function renderTable(tutors) {
+    const tbody = document.getElementById('tutorsTableBody');
+    const count = document.getElementById('tutors-count');
+
+    count.textContent = `${tutors.length} tutor${tutors.length !== 1 ? 's' : ''}`;
+
+    if (tutors.length === 0) {
+      tbody.innerHTML = `
+        <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--gray-400);">
+          No tutors found. Click "Add Tutor" to get started.
+        </td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = tutors.map(t => `
+      <tr>
+        <td><strong>${t.name}</strong></td>
+        <td>${t.staff_id}</td>
+        <td>${t.department || '—'}</td>
+        <td>${t.email || '—'}</td>
+        <td>${t.phone || '—'}</td>
+        <td>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-outline btn-sm" onclick='openEditModal(${JSON.stringify(t)})'>Edit</button>
+            <button class="btn btn-sm" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;"
+              onclick="deleteTutor(${t.id}, '${t.name}')">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  SAVE TUTOR (Add or Edit)
+  // ══════════════════════════════════════════════════════
+
+  async function saveTutor() {
+    const name    = document.getElementById('tutorName').value.trim();
+    const staffId = document.getElementById('tutorStaffId').value.trim();
+    const dept    = document.getElementById('tutorDept').value.trim();
+    const email   = document.getElementById('tutorEmail').value.trim();
+    const phone   = document.getElementById('tutorPhone').value.trim();
+    const errDiv  = document.getElementById('modalError');
+    const btn     = document.getElementById('saveTutorBtn');
+
+    // Validate
+    if (!name || !staffId) {
+      errDiv.textContent   = 'Full name and Staff ID are required.';
+      errDiv.style.display = 'block';
+      return;
+    }
+
+    btn.disabled    = true;
+    btn.textContent = 'Saving…';
+    errDiv.style.display = 'none';
+
+    const payload = { name, staff_id: staffId, department: dept, email, phone };
+    const isEdit  = editingId !== null;
+    const url     = isEdit ? `/api/tutors/${editingId}` : '/api/tutors';
+    const method  = isEdit ? 'PUT' : 'POST';
+
+    try {
+      const res  = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        errDiv.textContent   = data.error || 'Failed to save tutor.';
+        errDiv.style.display = 'block';
+        btn.disabled    = false;
+        btn.textContent = isEdit ? 'Update Tutor' : 'Save Tutor';
+        return;
+      }
+
+      closeModal('modalTutor');
+      showToast(isEdit ? 'Tutor updated successfully!' : 'Tutor added successfully!', 'success');
+      loadTutors(); // Refresh the table
+
+    } catch (err) {
+      errDiv.textContent   = 'Server error. Please try again.';
+      errDiv.style.display = 'block';
+      btn.disabled    = false;
+      btn.textContent = isEdit ? 'Update Tutor' : 'Save Tutor';
+    }
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  DELETE TUTOR
+  // ══════════════════════════════════════════════════════
+
+  async function deleteTutor(id, name) {
+    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+
+    try {
+      const res = await fetch(`/api/tutors/${id}`, {
+        method:  'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        showToast('Tutor deleted.', 'success');
+        loadTutors();
+      } else {
+        const data = await res.json();
+        showToast(data.error || 'Could not delete tutor.', 'error');
+      }
+    } catch (err) {
+      showToast('Server error. Please try again.', 'error');
+    }
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  SEARCH / FILTER
+  // ══════════════════════════════════════════════════════
+
+  function filterTutors(query) {
+    const q       = query.toLowerCase();
+    const filtered = allTutors.filter(t =>
+      t.name.toLowerCase().includes(q) ||
+      (t.department || '').toLowerCase().includes(q) ||
+      (t.staff_id   || '').toLowerCase().includes(q)
+    );
+    renderTable(filtered);
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  LOGOUT
+  // ══════════════════════════════════════════════════════
+
+  async function handleLogout() {
+    try {
+      await fetch('/api/auth/logout', {
+        method:  'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+    } catch (_) {}
+    localStorage.clear();
+    window.location.href = '/login';
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  TOAST NOTIFICATIONS
+  // ══════════════════════════════════════════════════════
+
+  function showToast(msg, type) {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = 'toast' + (type === 'success' ? ' success' : type === 'error' ? ' error' : '');
+    t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  CLOSE MODAL WHEN CLICKING OUTSIDE
+  // ══════════════════════════════════════════════════════
+
+  document.getElementById('modalTutor').addEventListener('click', function(e) {
+    if (e.target === this) closeModal('modalTutor');
+  });
+
+  // ── Load tutors on page load ───────────────────────────
+  loadTutors();
+</script>
+
 </body>
-
 </html>
